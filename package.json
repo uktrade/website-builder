@@ -1,0 +1,37 @@
+{
+  "name": "website-builder",
+  "version": "1.0.0",
+  "description": "Reusable website-builder core based on Metalsmith using Nunjucks template engine",
+  "bin": {
+    "website-builder": "bin/website-builder.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uktrade/website-builder.git"
+  },
+  "keywords": [
+    "website-builder",
+    "metalsmith",
+    "nunjucks"
+  ],
+  "author": "Bren",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/uktrade/website-builder/issues"
+  },
+  "homepage": "https://github.com/uktrade/website-builder#readme",
+  "dependencies": {
+    "colors": "^1.1.2",
+    "commander": "^2.9.0",
+    "debug": "^2.3.3",
+    "metalsmith": "^2.3.0",
+    "metalsmith-layouts": "^1.7.0",
+    "metalsmith-markdown": "^0.2.1",
+    "metalsmith-page-builder": "uktrade/metalsmith-page-builder#latest",
+    "nunjucks": "^3.0.0",
+    "nunjucks-date": "^1.2.0"
+  }
+}
