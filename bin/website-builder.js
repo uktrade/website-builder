@@ -274,7 +274,7 @@ function verifyPath(cPath) {
     fatal('could not find folder ' + path);
   }
 
-  return path;
+  return cPath;
 }
 
 
