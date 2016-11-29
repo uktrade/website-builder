@@ -69,7 +69,6 @@ program
  */
 program
   .command('clean')
-  // .alias('ex')
   .description('Clean target directory')
   .action(clean);
 
@@ -78,7 +77,6 @@ program
  */
 program
   .command('build')
-  // .alias('ex')
   .description('build website using structure files, layouts and contents')
   .option('-l, --layouts [path]',
     'directory containing layouts; relative to working directory [' + LAYOUTS + ']',
@@ -112,11 +110,10 @@ program
  */
 program
   .command('assets')
-  // .alias('ex')
   .description('Copy asset files, optionally build sass files')
   .option('-a, --assets [path]',
     'asset files directory; relative to working directory [' + ASSETS + ']',
-    './assets'
+    ASSETS
   )
   .option('-s, --sass <path>',
     'directory containing sass files; relative to assets directory')
@@ -127,9 +124,9 @@ program
   .on('--help', function() {
     console.log('  Examples:');
     console.log();
-    console.log('   # build sass files under src/scss to build/assets/css ' +
-      '(build is default target, to change target use --target option):');
-    console.log('   $ website-builder assets --sass src/scss -o assets/css ');
+    console.log('   # build assets files under src/assets to build/assets ');
+    console.log('   #building .scss files under src/assets/scss into build/assets/css ');
+    console.log('   $ website-builder -t build/assets assets --sass ./scss -o ./css ');
     console.log();
   });
 
@@ -205,7 +202,7 @@ function buildSass(options) {
   var _outputDir;
   if (options.sass) {
     _sass = verifyPath(path.join(_assets, options.sass));
-    _outputDir = options.outputDir;
+    _outputDir = options.sassOutput;
     sassFiles = fs.readdirSync(_sass);
     debug('Sass files: %s', _sass);
     debug('Sass Output: %s', _outputDir);
@@ -255,6 +252,9 @@ function clean(options) {
 }
 
 function verifyPath(cPath) {
+  if (!cPath) {
+    fatal('path not given!');
+  }
   var path = resolve(program.workdir, cPath);
   if (!exists(path)) {
     fatal('could not find folder ' + path);
