@@ -120,7 +120,7 @@ program
   )
   .option('-s, --sass <path>',
     'directory containing sass files; relative to assets directory')
-  .option('-o, --output-dir <path>',
+  .option('-o, --sass-output <path>',
     'sass output directory relative to build directory to copy css output to'
   )
   .action(buildSass)
