@@ -6,11 +6,14 @@
 
 var fs = require('fs');
 var exists = fs.existsSync;
+var rmdir = require('rimraf');
 var path = require('path');
 var resolve = path.resolve;
 var metalsmith = require('metalsmith');
 var markdown = require('metalsmith-markdown');
 var pageBuilder = require('metalsmith-page-builder');
+var assets = require('metalsmith-assets');
+var sass = require('metalsmith-sass');
 var layouts = require('metalsmith-layouts');
 var program = require('commander');
 var colors = require('colors');
@@ -32,23 +35,16 @@ var error = logger.error;
 var command;
 var options;
 
-var dir;
-var target;
-
-
 
 /**
  * Default folders
  */
 
-var ASSETS = 'assets';
-var SASS = 'sass';
-var LAYOUTS = 'layouts';
-var CONTENT = 'content';
-var STRUCTURE = 'structure';
-var TARGET = 'build';
-var ASSETS_TARGET = 'assets';
-var SASS_TARGET = 'assets/css';
+var ASSETS = './assets';
+var LAYOUTS = './layouts';
+var CONTENT = './content';
+var STRUCTURE = './structure';
+var TARGET = './build';
 
 
 /**
@@ -57,13 +53,25 @@ var SASS_TARGET = 'assets/css';
 
 program
   .version(require('../package.json').version)
-  .option('-w, --workdir <path>', 'base working directory (defaults to current working directory)')
+  .option('-w, --workdir [path]',
+    'base working directory (defaults to current working directory)',
+    process.cwd()
+  )
   .option(
-    '-t, --target <path>', 'target build directory;' +
-    ' relative to working directory ( default is ./build)')
-  .action(function(cmd, options) {
-    command = cmd;
-  });
+    '-t, --target [path]',
+    'target build directory; relative to working directory ( default is ' + TARGET + ')',
+    TARGET
+  );
+
+
+/**
+ * Clean command configuration and usage
+ */
+program
+  .command('clean')
+  // .alias('ex')
+  .description('Clean target directory')
+  .action(clean);
 
 /**
  * Build command configuration and usage
@@ -72,13 +80,20 @@ program
   .command('build')
   // .alias('ex')
   .description('build website using structure files, layouts and contents')
-  .option('-l, --layouts <path>', 'directory containing layouts; relative to working directory ( default is ./layouts )')
+  .option('-l, --layouts [path]',
+    'directory containing layouts; relative to working directory [' + LAYOUTS + ']',
+    LAYOUTS
+  )
   .option(
-    '-c, --content <path>', 'directory containing contents;' +
-    ' relative to working directory ( default is ./content )')
+    '-c, --content [path]',
+    'directory containing contents; relative to working directory [' + CONTENT + ']',
+    './content'
+  )
   .option(
-    '-s, --structure <path>', 'directory containing structure files;' +
-    ' relative to working directory ( default is ./structure)')
+    '-s, --structure [path]',
+    'directory containing structure files; relative to working directory [' + STRUCTURE + ']',
+    './structure'
+  )
   .action(build)
   .on('--help', function() {
     console.log('  Examples:');
@@ -98,30 +113,17 @@ program
 program
   .command('assets')
   // .alias('ex')
-  .description('copy assets under source folder to destionation folder with no change ')
-  .option('-a, --assets <path>', 'directory containing assets; relative to working directory ( default is ./assets) ')
-  .option('-o, --assets-target <path>', 'target assets folder relative to build directory to copy assets to')
-  .action(assets)
-  .on('--help', function() {
-    console.log('  Examples:');
-    console.log();
-    console.log('   # copy assets under src/assets to build/assets ' +
-      '(build is default target, to change target use --target option):');
-    console.log('   $ website-builder assets --assets src/assets -o assets ');
-    console.log();
-  });
-
-
-/**
- * Sass command configuration and usage
- */
-program
-  .command('sass')
-  // .alias('ex')
-  .description('Build sass files')
-  .option('-s, --sass <path>', 'directory containing sass files; relative to working directory ( default is ./scss)')
-  .option('-o, --output-dir <path>', 'output directory relative to build directory to copy css output to')
-  .action(assets)
+  .description('Copy asset files, optionally build sass files')
+  .option('-a, --assets [path]',
+    'asset files directory; relative to working directory [' + ASSETS + ']',
+    './assets'
+  )
+  .option('-s, --sass <path>',
+    'directory containing sass files; relative to assets directory')
+  .option('-o, --output-dir <path>',
+    'sass output directory relative to build directory to copy css output to'
+  )
+  .action(buildSass)
   .on('--help', function() {
     console.log('  Examples:');
     console.log();
@@ -152,22 +154,21 @@ if (!process.argv.slice(2).length) {
 
 function build(options) {
 
-  init();
-  var _layouts = verifyPath(options.layouts || LAYOUTS);
-  var _structures = verifyPath(options.structure || STRUCTURE);
-  var _contents = verifyPath(options.content || CONTENT);
+  verifyWorkdir();
+  var _layouts = verifyPath(options.layouts);
+  var _structures = verifyPath(options.structure);
+  var _contents = verifyPath(options.content);
 
   debug('Bulding website using following directories:');
   debug('Content folder: %s', _contents);
   debug('Layout folder: %s', _layouts);
   debug('Structure folder: %s', _structures);
-  configureNunjucks();
+  configureNunjucks(_layouts);
 
   buildPages();
 
   function buildPages() {
-
-    var m = metalsmith(dir)
+    var m = metalsmith(program.workdir)
       .source(_contents)
       .use(markdown())
       .use(pageBuilder({
@@ -177,99 +178,84 @@ function build(options) {
         engine: 'nunjucks',
         directory: _layouts
       }))
-      // .use(sassBuilder())
-      .destination(target)
+      .clean(false)
+      .destination(program.target)
       .build(function(err) {
         if (err) {
           fatal('Build failed', err);
         } else {
-          debug('Successfully built to %s', target);
+          debug('Successfully built to %s', program.target);
         }
       });
 
-
-
-    /**
-     *
-     */
-    function sass() {
-
-      init();
-      var _sass = verifyPath(options.sass || SASS);
-      var _outputDir = options.outputDir || SASS_TARGET;
-
-      var m = metalsmith(dir)
-        .source(sass);
-
-      var files = fs.readdirSync(_sass);
-      var path = require('path');
-
-      for (var i in files) {
-        if (path.extname(files[i]) === '.scss') {
-          m.use(sass({
-            file: path.basename(files[i]),
-            outputDir: _outputDir,
-            outputStyle: 'compressed'
-          }));
-        }
-      }
-
-      m.destination(target)
-        .build(function(err) {
-          if (err) {
-            fatal('Sass failed!', err);
-          } else {
-            debug('Sass files processed successfully');
-          }
-        });
-
-    }
   }
 }
 
 
+
 /**
  *
- * Copies assets with no change under given output directory
- *
- * @param  {Object} options source/target options
  */
-function assets(options) {
+function buildSass(options) {
 
-  init();
-  var _assets = verifyPath(options.assets || ASSETS);
-  var _assetsTarget = options.outputDir || ASSETS_TARGET;
+  verifyWorkdir();
+  var _assets = verifyPath(options.assets);
+  var _sass;
+  var sassFiles;
+  var _outputDir;
+  if (options.sass) {
+    _sass = verifyPath(path.join(_assets, options.sass));
+    _outputDir = options.outputDir;
+    sassFiles = fs.readdirSync(_sass);
+    debug('Sass files: %s', _sass);
+    debug('Sass Output: %s', _outputDir);
+  }
 
-  debug('Copying assets under %s over to target folder %s', _assets, _assetsTarget);
+  var m = metalsmith(program.workdir)
+    .source(_assets);
 
-  metalsmith(dir)
-    .use(assets({
-      source: _assets,
-      destination: _assetsTarget
-    })).destination(target)
+  if (options.sass) {
+    for (var i in sassFiles) {
+      if (path.extname(sassFiles[i]) === '.scss') {
+        debug('Sass: %s', sassFiles[i]);
+        m.use(sass({
+          file: sassFiles[i],
+          outputDir: _outputDir,
+          outputStyle: 'compressed'
+        }));
+      }
+    }
+  }
+
+  m.clean(false)
+    .destination(program.target)
     .build(function(err) {
       if (err) {
-        fatal('Assets failed!');
+        fatal('Sass failed!', err);
       } else {
-        debug('Assets copied successfully!');
+        debug('Sass files processed successfully');
       }
     });
+
 }
 
-/**
- * Initialising global options
- */
-function init() {
-  dir = program.workdir || process.cwd();
-  target = program.target || TARGET;
 
-  debug('Working directory: %s', dir);
-  debug('Build target: %s', target);
+function clean(options) {
+  var target = resolve(program.workdir, program.target);
+  if (!exists(target)) {
+    debug('No target to clean');
+  } else {
+    debug('Clean: %s', target);
+    rmdir(path.join(target, '*'), function(error) {
+      if (error) {
+        fatal('Failed cleaning', error);
+      }
+    });
+  }
 }
-
 
 function verifyPath(cPath) {
-  var path = resolve(dir, cPath);
+  var path = resolve(program.workdir, cPath);
   if (!exists(path)) {
     fatal('could not find folder ' + path);
   }
@@ -277,10 +263,16 @@ function verifyPath(cPath) {
   return cPath;
 }
 
+function verifyWorkdir() {
+  var path = resolve(program.workdir);
+  if (!exists(path)) {
+    fatal('could not find folder ' + path);
+  }
+}
 
 
 function configureNunjucks(layouts) {
-  var env = nunjucks.configure(layouts + '/templates', {
+  var env = nunjucks.configure(layouts, {
     watch: false
   });
 
@@ -331,8 +323,4 @@ function fatal(msg, stack) {
     error(stack);
   }
   process.exit(1);
-}
-
-function isDev() {
-  return process.argv[2] && process.argv[2] === 'dev';
 }
