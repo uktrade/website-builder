@@ -15,6 +15,7 @@ var pageBuilder = require('metalsmith-page-builder');
 var assets = require('metalsmith-assets');
 var sass = require('metalsmith-sass');
 var layouts = require('metalsmith-layouts');
+var htmlMinifier= require('metalsmith-html-minifier');
 var program = require('commander');
 var colors = require('colors');
 var nunjucks = require('nunjucks');
@@ -175,6 +176,7 @@ function build(options) {
         engine: 'nunjucks',
         directory: _layouts
       }))
+      .use(htmlMinifier())
       .clean(false)
       .destination(program.target)
       .build(function(err) {
