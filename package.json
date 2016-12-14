@@ -1,6 +1,6 @@
 {
   "name": "website-builder",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Reusable website-builder core based on Metalsmith using Nunjucks template engine",
   "bin": {
     "website-builder": "bin/website-builder.js"
@@ -29,6 +29,7 @@
     "debug": "^2.3.3",
     "metalsmith": "^2.3.0",
     "metalsmith-assets": "^0.1.0",
+    "metalsmith-html-minifier": "^2.2.0",
     "metalsmith-layouts": "^1.7.0",
     "metalsmith-markdown": "^0.2.1",
     "metalsmith-page-builder": "uktrade/metalsmith-page-builder",
@@ -36,9 +37,5 @@
     "nunjucks": "^3.0.0",
     "nunjucks-date": "^1.2.0",
     "rimraf": "^2.5.4"
-  },
-  "devDependencies": {
-    "metalsmith": "^2.3.0",
-    "metalsmith-html-minifier": "^2.2.0"
   }
 }
