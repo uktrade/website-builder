@@ -27,6 +27,7 @@
     "colors": "^1.1.2",
     "commander": "^2.9.0",
     "debug": "^2.3.3",
+    "jasmine": "^2.5.2",
     "metalsmith": "^2.3.0",
     "metalsmith-assets": "^0.1.0",
     "metalsmith-html-minifier": "^2.2.0",
