@@ -20,6 +20,7 @@ var program = require('commander');
 var colors = require('colors');
 var nunjucks = require('nunjucks');
 var nunjucksDate = require('nunjucks-date');
+var Jasmine = require('jasmine');
 
 /**
  * Helpers
@@ -46,6 +47,7 @@ var LAYOUTS = './layouts';
 var CONTENT = './content';
 var STRUCTURE = './structure';
 var TARGET = './build';
+var TESTS = './spec';
 
 
 /**
@@ -72,6 +74,19 @@ program
   .command('clean')
   .description('Clean target directory')
   .action(clean);
+
+program
+  .command('test')
+  .description('Run unit tests under given test directory using Jasmine')
+  .option(
+    '-d, --directory [path]',
+    'directory containing test files in the format *.spec.js [' + TESTS + ']',
+    TESTS
+  )
+  .action(runTests);
+
+
+
 
 /**
  * Build command configuration and usage
@@ -190,6 +205,24 @@ function build(options) {
   }
 }
 
+function runTests(options) {
+  var _directory = verifyPath(options.directory);
+  var jasmine = new Jasmine();
+
+  /* jshint ignore:start */
+  jasmine.loadConfig({
+        spec_dir: _directory,
+        spec_files: [
+                  '**/*.[sS]pec.js',
+              ],
+        helpers: [
+                  'helpers/**/*.js'
+              ]
+  });
+
+  jasmine.execute();
+  /* jshint ignore:end*/
+}
 
 
 /**
