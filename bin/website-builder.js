@@ -48,6 +48,7 @@ var CONTENT = './content';
 var STRUCTURE = './structure';
 var TARGET = './build';
 var TESTS = './spec';
+var DEV='false';
 
 
 /**
