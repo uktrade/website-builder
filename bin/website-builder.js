@@ -13,7 +13,6 @@ var metalsmith = require('metalsmith');
 var markdown = require('metalsmith-markdown');
 var pageBuilder = require('metalsmith-page-builder');
 var sass = require('metalsmith-sass');
-var browserify = require('metalsmith-browserify');
 var layouts = require('metalsmith-layouts');
 var htmlMinifier= require('metalsmith-html-minifier');
 var program = require('commander');
@@ -142,14 +141,6 @@ program
   .option('-o, --sass-output <path>',
     'sass output directory relative to build directory to copy css output to'
   )
-  .option(
-    '-j, --js <path>',
-    'Main Javascript file path; relative to assets directory. Bundled with browserify'
-  )
-  .option(
-    '-w, --js-output <path>',
-    'Javascript output file relative to build directory'
-  )
   .action(buildAssets)
   .on('--help', function() {
     console.log('  Examples:');
@@ -273,18 +264,6 @@ function buildAssets(options) {
         }));
       }
     }
-  }
-
-  if(options.js) {
-    var _js = verifyPath(path.join(_assets, options.js));
-    var _jsOutput = options.jsOutput;
-    debug('Javascript file: %s', _js);
-
-    m.use(browserify({
-      dest: _jsOutput,
-      entries:[_js],
-      sourceMaps: dev
-    }))
   }
 
   m.clean(false)
