@@ -283,8 +283,7 @@ function buildAssets(options) {
     m.use(browserify({
       dest: _jsOutput,
       entries:[_js],
-      sourceMaps: dev,
-      watch: dev
+      sourceMaps: dev
     }))
   }
 
