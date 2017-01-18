@@ -12,8 +12,8 @@ var resolve = path.resolve;
 var metalsmith = require('metalsmith');
 var markdown = require('metalsmith-markdown');
 var pageBuilder = require('metalsmith-page-builder');
-var assets = require('metalsmith-assets');
 var sass = require('metalsmith-sass');
+var browserify = require('metalsmith-browserify');
 var layouts = require('metalsmith-layouts');
 var htmlMinifier= require('metalsmith-html-minifier');
 var program = require('commander');
@@ -35,19 +35,11 @@ var reporter = new JasmineConsoleReporter({
  */
 var logger = require('../lib/helpers/logger')('website-builder');
 var debug = logger.debug;
-var warn = logger.warn;
 var error = logger.error;
 
 
 /**
- * command and global options
- */
-var command;
-var options;
-
-
-/**
- * Default folders
+ * Default options
  */
 
 var ASSETS = './assets';
@@ -139,12 +131,25 @@ program
     'asset files directory; relative to working directory [' + ASSETS + ']',
     ASSETS
   )
+  .option(
+    '-d, --dev [true|false]',
+    'set dev flag for sourcemap and optimisation for js and sass [' + DEV + ']',
+    DEV
+  )
   .option('-s, --sass <path>',
     'directory containing sass files; relative to assets directory')
   .option('-o, --sass-output <path>',
     'sass output directory relative to build directory to copy css output to'
   )
-  .action(buildSass)
+  .option(
+    '-j, --js <path>',
+    'Main Javascript file path; relative to assets directory. Bundled with browserify'
+  )
+  .option(
+    '-w, --js-output <path>',
+    'Javascript output file relative to build directory'
+  )
+  .action(buildAssets)
   .on('--help', function() {
     console.log('  Examples:');
     console.log();
@@ -237,44 +242,58 @@ function runTests(options) {
 /**
  *
  */
-function buildSass(options) {
+function buildAssets(options) {
 
   verifyWorkdir();
+  var dev=options.dev == "true" ? true : false;
+  debug('Dev flag is', dev);
   var _assets = verifyPath(options.assets);
-  var _sass;
-  var sassFiles;
-  var _outputDir;
-  if (options.sass) {
-    _sass = verifyPath(path.join(_assets, options.sass));
-    _outputDir = options.sassOutput;
-    sassFiles = fs.readdirSync(_sass);
-    debug('Sass files: %s', _sass);
-    debug('Sass Output: %s', _outputDir);
-  }
+
 
   var m = metalsmith(program.workdir)
     .source(_assets);
 
   if (options.sass) {
+    var _sass = verifyPath(path.join(_assets, options.sass));
+    var _outputDir = options.sassOutput;
+    var sassFiles = fs.readdirSync(_sass);
+    debug('Sass files: %s', _sass);
+    debug('Sass Output: %s', _outputDir);
+
     for (var i in sassFiles) {
       if (path.extname(sassFiles[i]) === '.scss') {
         debug('Sass: %s', sassFiles[i]);
         m.use(sass({
           file: sassFiles[i],
           outputDir: _outputDir,
-          outputStyle: 'compressed'
+          outputStyle: dev ? 'expanded': 'compressed',
+          sourceMap: dev,
+          sourceMapContents: dev// This will embed all the Sass contents in your source maps.
         }));
       }
     }
+  }
+
+  if(options.js) {
+    var _js = verifyPath(path.join(_assets, options.js));
+    var _jsOutput = options.jsOutput;
+    debug('Javascript file: %s', _js);
+
+    m.use(browserify({
+      dest: _jsOutput,
+      entries:[_js],
+      sourceMaps: dev,
+      watch: dev
+    }))
   }
 
   m.clean(false)
     .destination(program.target)
     .build(function(err) {
       if (err) {
-        fatal('Sass failed!', err);
+        fatal('Assets failed!', err);
       } else {
-        debug('Sass files processed successfully');
+        debug('Asset files processed successfully');
       }
     });
 
@@ -301,7 +320,7 @@ function verifyPath(cPath) {
   }
   var path = resolve(program.workdir, cPath);
   if (!exists(path)) {
-    fatal('could not find folder ' + path);
+    fatal('could not find ' + path);
   }
 
   return cPath;
