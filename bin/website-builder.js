@@ -201,7 +201,9 @@ function build(options) {
       .destination(program.target)
       .build(function(err) {
         if (err) {
+          error('Stack', err.stack);
           fatal('Build failed', err);
+
         } else {
           debug('Successfully built to %s', program.target);
         }
@@ -314,6 +316,7 @@ function verifyWorkdir() {
 
 
 function configureNunjucks(layouts) {
+  debug('Configuring nunjucks');
   var env = nunjucks.configure(layouts, {
     watch: false
   });
@@ -349,6 +352,7 @@ function configureNunjucks(layouts) {
 
   nunjucksDate.setDefaultFormat('DD MMMM YYYY');
   nunjucksDate.install(env);
+  debug('Configuring nunjucks done');
 }
 
 /**
