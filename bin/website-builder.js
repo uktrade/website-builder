@@ -323,7 +323,8 @@ function configureNunjucks(layouts) {
 
   // helper to slugify strings
   env.addFilter('slug', function(content, language) {
-    if ((language || 'us') === 'zh') {
+    var lang = language || 'en';
+    if (lang === 'zh' || lang === 'ja') {
       return content;
     }
 
